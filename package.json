@@ -1,6 +1,6 @@
 {
   "name": "opencode-claude-bridge",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "OpenCode ↔ Claude bridge — keychain sync + PKCE OAuth + request transformation",
   "type": "module",
   "main": "dist/index.js",
@@ -19,6 +19,10 @@
     "oauth",
     "claude"
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dotCipher/opencode-claude-bridge"
+  },
   "author": "dotCipher",
   "license": "MIT",
   "devDependencies": {
