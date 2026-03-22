@@ -37,7 +37,10 @@ The plugin sits between OpenCode and the Anthropic API:
 
 > **OpenCode** → **opencode-claude-bridge** → **Anthropic API**
 
-**Authentication** — On load, the plugin reads your Claude CLI's OAuth tokens from macOS Keychain (or `~/.claude/.credentials.json` on Linux). No browser flow needed. If Claude CLI isn't available, it falls back to browser-based OAuth PKCE.
+**Authentication** — Supports both OAuth and API key auth:
+
+- **OAuth (Pro/Max)** — Auto-reads your Claude CLI's OAuth tokens from macOS Keychain (or `~/.claude/.credentials.json` on Linux). No browser flow needed. If Claude CLI isn't available, falls back to browser-based OAuth PKCE.
+- **API key** — Works alongside a standard `provider` entry in your OpenCode config with an `apiKey`. The plugin only activates its OAuth handling for the built-in `anthropic` provider; custom API key providers pass through unchanged.
 
 **Token refresh** — When tokens expire, three layers are tried in order: re-read from Keychain, refresh via stored token, refresh via CLI's token. On 429 rate limits, the token is refreshed and the request retried (up to 3 attempts).
 
@@ -45,9 +48,10 @@ The plugin sits between OpenCode and the Anthropic API:
 
 ## Requirements
 
-- [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`)
 - [OpenCode](https://opencode.ai) v1.2+
+- For OAuth: [Claude CLI](https://docs.anthropic.com/en/docs/claude-code) installed and logged in (`claude login`)
 - macOS (Keychain) or Linux (`~/.claude/.credentials.json` fallback)
+- For API key: just configure a `provider` with `apiKey` in your OpenCode config as usual
 
 ## Environment overrides
 
