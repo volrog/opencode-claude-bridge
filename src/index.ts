@@ -7,6 +7,7 @@ import {
 import { getClaudeTokens, readClaudeCredentials } from "./keychain.js";
 import {
   BETA_FLAGS,
+  CLI_VERSION,
   OAUTH_BETA_FLAG,
   ANTHROPIC_VERSION,
   STAINLESS_HEADERS,
@@ -172,8 +173,9 @@ const OpenCodeClaudeBridge = async ({ client }: { client: PluginClient }) => {
           return {};
         }
 
-        // OAuth active — clear env key so SDK doesn't use it over our token
-        delete process.env.ANTHROPIC_API_KEY;
+        // OAuth active — set a placeholder so the SDK doesn't error on missing key.
+        // Our fetch wrapper sets the real Authorization: Bearer header and removes x-api-key.
+        process.env.ANTHROPIC_API_KEY = "oauth-placeholder";
 
         // Zero out cost for Pro/Max subscription
         for (const model of Object.values(provider.models)) {
@@ -226,6 +228,27 @@ const OpenCodeClaudeBridge = async ({ client }: { client: PluginClient }) => {
                   parsed.temperature !== 1
                 ) {
                   parsed.temperature = 1;
+                }
+
+                // Inject billing header as first system block (required for OAuth)
+                if (!parsed.system) parsed.system = [];
+                const hasBilling = parsed.system.some(
+                  (s: { text?: string }) =>
+                    s.text?.startsWith("x-anthropic-billing-header:"),
+                );
+                if (!hasBilling) {
+                  // Generate content hash matching Claude CLI's format
+                  const sysContent = parsed.system
+                    .map((s: { text?: string }) => s.text || "")
+                    .join("");
+                  const { createHash } = await import("node:crypto");
+                  const hash = createHash("sha256")
+                    .update(sysContent)
+                    .digest("hex");
+                  parsed.system.unshift({
+                    type: "text",
+                    text: `x-anthropic-billing-header: cc_version=${CLI_VERSION}.${hash.slice(0, 3)}; cc_entrypoint=cli; cch=${hash.slice(0, 5)};`,
+                  });
                 }
 
                 // Sanitize system prompt
