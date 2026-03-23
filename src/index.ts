@@ -218,6 +218,16 @@ const OpenCodeClaudeBridge = async ({ client }: { client: PluginClient }) => {
                   parsed.thinking = { type: "adaptive" };
                 }
 
+                // Anthropic requires temperature=1 when thinking is enabled/adaptive
+                const thinkingType = parsed.thinking?.type;
+                if (
+                  (thinkingType === "enabled" || thinkingType === "adaptive") &&
+                  parsed.temperature !== undefined &&
+                  parsed.temperature !== 1
+                ) {
+                  parsed.temperature = 1;
+                }
+
                 // Sanitize system prompt
                 if (parsed.system && Array.isArray(parsed.system)) {
                   parsed.system = parsed.system.map(
