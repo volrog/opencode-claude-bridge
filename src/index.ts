@@ -360,15 +360,13 @@ const OpenCodeClaudeBridge = async ({ client }: { client: PluginClient }) => {
           authorize: async () => {
             const tokens = getClaudeTokens();
             if (tokens) {
-              console.error("[opencode-oauth] Auto-authenticated via Claude CLI");
               return { type: "success" as const, ...tokens };
             }
 
-            console.error("[opencode-oauth] No Claude CLI found, starting browser OAuth...");
             const { url, verifier } = createAuthorizationRequest();
             return {
               url,
-              instructions: "Paste the authorization code here: ",
+              instructions: "Open the URL above, complete login, then paste the authorization code: ",
               method: "code" as const,
               callback: async (code: string) => {
                 try {
