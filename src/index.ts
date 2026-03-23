@@ -91,21 +91,23 @@ async function refreshAuth(
   return null;
 }
 
+const CLAUDE_PREFIX =
+  "You are Claude Code, Anthropic's official CLI for Claude.";
+
 const AnthropicOAuthCombined = async ({ client }: { client: PluginClient }) => {
   return {
-    // --- System prompt: prepend Claude Code identity ---
+    // Prepend Claude Code identity (skip if already present from another plugin)
     "experimental.chat.system.transform": (
       input: { model?: { providerID: string } },
       output: { system: string[] },
     ) => {
-      if (input.model?.providerID === "anthropic") {
-        const prefix =
-          "You are Claude Code, Anthropic's official CLI for Claude.";
-        if (output.system.length > 0) {
-          output.system[0] = `${prefix}\n\n${output.system[0]}`;
-        } else {
-          output.system.push(prefix);
-        }
+      if (input.model?.providerID !== "anthropic") return;
+      const alreadyHas = output.system.some((s) => s.includes(CLAUDE_PREFIX));
+      if (alreadyHas) return;
+      if (output.system.length > 0) {
+        output.system[0] = `${CLAUDE_PREFIX}\n\n${output.system[0]}`;
+      } else {
+        output.system.push(CLAUDE_PREFIX);
       }
     },
 
@@ -155,12 +157,10 @@ const AnthropicOAuthCombined = async ({ client }: { client: PluginClient }) => {
             };
           }
 
-          // Temporarily clear env var so SDK doesn't use it over our OAuth token
-          const savedApiKey = process.env.ANTHROPIC_API_KEY;
+          // Clear env var so SDK doesn't use it over our OAuth token
           delete process.env.ANTHROPIC_API_KEY;
 
           return {
-            // authToken tells SDK to use Authorization: Bearer (skips x-api-key)
             authToken: auth.access,
 
             async fetch(
@@ -242,17 +242,31 @@ const AnthropicOAuthCombined = async ({ client }: { client: PluginClient }) => {
                 try {
                   const parsed = JSON.parse(body);
 
+                  // Required for interleaved-thinking beta
+                  if (!parsed.thinking) {
+                    parsed.thinking = { type: "adaptive" };
+                  }
+
                   // Sanitize system prompt
                   if (parsed.system && Array.isArray(parsed.system)) {
                     parsed.system = parsed.system.map(
                       (item: { type?: string; text?: string }) => {
                         if (item.type === "text" && item.text) {
-                          return {
-                            ...item,
-                            text: item.text
-                              .replace(/OpenCode/g, "Claude Code")
-                              .replace(/opencode/gi, "Claude"),
-                          };
+                          let text = item.text
+                            .replace(/OpenCode/g, "Claude Code")
+                            .replace(/opencode/gi, "Claude");
+                          // Deduplicate prefix (multiple plugins may add it)
+                          while (
+                            text.includes(
+                              `${CLAUDE_PREFIX}\n\n${CLAUDE_PREFIX}`,
+                            )
+                          ) {
+                            text = text.replace(
+                              `${CLAUDE_PREFIX}\n\n${CLAUDE_PREFIX}`,
+                              CLAUDE_PREFIX,
+                            );
+                          }
+                          return { ...item, text };
                         }
                         return item;
                       },
@@ -329,11 +343,23 @@ const AnthropicOAuthCombined = async ({ client }: { client: PluginClient }) => {
                     : requestUrl;
               }
 
+              const finalUrl =
+                typeof requestInput === "string"
+                  ? requestInput
+                  : requestInput instanceof URL
+                    ? requestInput.toString()
+                    : requestInput.url;
+
               // --- Make request ---
-              const response = await fetch(requestInput, {
-                ...init,
+              const outHeaders: Record<string, string> = {};
+              headers.forEach((v, k) => {
+                outHeaders[k] = v;
+              });
+              const response = await globalThis.fetch(finalUrl, {
+                method: init?.method || "POST",
                 body,
-                headers,
+                headers: outHeaders,
+                signal: init?.signal,
               });
 
               // Strip mcp_ prefix from streaming response
@@ -378,7 +404,6 @@ const AnthropicOAuthCombined = async ({ client }: { client: PluginClient }) => {
           label: "Claude Pro/Max",
           type: "oauth" as const,
           authorize: async () => {
-            // Auto-sync from Claude CLI (zero interaction)
             const tokens = getClaudeTokens();
             if (tokens) {
               console.error(
@@ -392,7 +417,6 @@ const AnthropicOAuthCombined = async ({ client }: { client: PluginClient }) => {
               };
             }
 
-            // Fallback: browser OAuth PKCE
             console.error(
               "[opencode-oauth] No Claude CLI found, starting browser OAuth...",
             );
