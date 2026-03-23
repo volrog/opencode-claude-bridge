@@ -12,9 +12,12 @@ Add to `~/.config/opencode/opencode.json`:
 }
 ```
 
-OpenCode auto-installs the plugin from npm on next launch. Select an Anthropic model, choose **Claude Pro/Max** when prompted, and you're in.
+OpenCode auto-installs the plugin from npm on next launch.
 
-**From source:**
+If you're logged into the Claude CLI (`claude login`), the plugin auto-syncs your credentials — just select an Anthropic model and start chatting. If not, you'll be prompted to authenticate via browser OAuth or enter an API key.
+
+<details>
+<summary>Install from source</summary>
 
 ```bash
 git clone https://github.com/dotCipher/opencode-claude-bridge.git ~/opencode-claude-bridge
@@ -28,6 +31,7 @@ Then reference the full path in your config:
   "plugin": ["/Users/YOU/opencode-claude-bridge/dist/index.js"]
 }
 ```
+</details>
 
 ## How the bridge works
 
@@ -53,13 +57,7 @@ The plugin sits between OpenCode and the Anthropic API:
 
 ## Environment overrides
 
-| Variable | Default |
-|----------|---------|
-| `ANTHROPIC_CLIENT_ID` | `9d1c250a-...` (Anthropic's public OAuth client) |
-| `ANTHROPIC_TOKEN_URL` | `https://console.anthropic.com/v1/oauth/token` |
-| `ANTHROPIC_AUTHORIZE_URL` | `https://claude.ai/oauth/authorize` |
-| `ANTHROPIC_CLI_VERSION` | Auto-detected from `claude --version` |
-| `ANTHROPIC_BETA_FLAGS` | Matches Claude Code 2.1.81 |
+All OAuth and header parameters can be overridden via environment variables (`ANTHROPIC_CLIENT_ID`, `ANTHROPIC_TOKEN_URL`, `ANTHROPIC_AUTHORIZE_URL`, `ANTHROPIC_CLI_VERSION`, `ANTHROPIC_BETA_FLAGS`). Defaults match Claude Code 2.1.81 — most users won't need to change these.
 
 ## Updating for new Claude CLI versions
 
@@ -79,7 +77,7 @@ Key things that have changed across versions:
 
 ## Credits
 
-Combines approaches from [shahidshabbir-se/opencode-anthropic-oauth](https://github.com/shahidshabbir-se/opencode-anthropic-oauth), [ex-machina-co/opencode-anthropic-auth](https://github.com/ex-machina-co/opencode-anthropic-auth), [vinzabe/PERMANENT-opencode-anthropic-oauth-fix](https://github.com/vinzabe/PERMANENT-opencode-anthropic-oauth-fix), and [lehdqlsl/opencode-claude-auth-sync](https://github.com/lehdqlsl/opencode-claude-bridge).
+Combines approaches from [shahidshabbir-se/opencode-anthropic-oauth](https://github.com/shahidshabbir-se/opencode-anthropic-oauth), [ex-machina-co/opencode-anthropic-auth](https://github.com/ex-machina-co/opencode-anthropic-auth), [vinzabe/PERMANENT-opencode-anthropic-oauth-fix](https://github.com/vinzabe/PERMANENT-opencode-anthropic-oauth-fix), and [lehdqlsl/opencode-claude-auth-sync](https://github.com/lehdqlsl/opencode-claude-auth-sync).
 
 ## License
 
