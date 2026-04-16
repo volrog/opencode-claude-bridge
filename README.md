@@ -82,7 +82,7 @@ If the model calls a stub tool, OpenCode's built-in error handling catches it, t
 
 Claude Code and OpenCode use different parameter naming conventions. The bridge translates in both directions on the fly:
 
-**Inbound (API response -> OpenCode)** — translated via regex on the SSE stream:
+**Inbound (API response -> OpenCode)** — translated on assembled SSE `input_json_delta` payloads after buffering per-tool fragments, so chunk boundary splits do not corrupt name or argument mapping:
 
 | Claude Code sends | OpenCode expects |
 |---|---|
