@@ -15,6 +15,7 @@ import {
   translateArgsOpencodeToClaude,
   AGENT_TYPE_CLAUDE_TO_OPENCODE,
   AGENT_TYPE_OPENCODE_TO_CLAUDE,
+  shouldUseClaudeToolSchemas,
 } from "./claude-tools.js";
 import { createSseProcessor, parseSseEvent, buildSseEvent } from "./stream.js";
 
@@ -126,6 +127,36 @@ describe("temperature coercion", () => {
       JSON.stringify({ model: "claude-sonnet-4-6", messages: [] }),
     );
     assert.equal(out.temperature, undefined);
+  });
+});
+
+describe("tool schema selection", () => {
+  it("uses Claude schemas for native Anthropic requests", () => {
+    assert.equal(shouldUseClaudeToolSchemas({
+      model: "claude-sonnet-4-6",
+      requestUrl: "https://api.anthropic.com/v1/messages",
+    }), true);
+  });
+
+  it("uses Claude schemas for Claude-family models on OpenRouter", () => {
+    assert.equal(shouldUseClaudeToolSchemas({
+      model: "anthropic/claude-3.7-sonnet",
+      requestUrl: "https://openrouter.ai/api/v1/chat/completions",
+    }), true);
+  });
+
+  it("keeps default schemas for non-Claude models on OpenRouter", () => {
+    assert.equal(shouldUseClaudeToolSchemas({
+      model: "x-ai/grok-4-fast",
+      requestUrl: "https://openrouter.ai/api/v1/chat/completions",
+    }), false);
+  });
+
+  it("keeps default schemas for non-Claude targets", () => {
+    assert.equal(shouldUseClaudeToolSchemas({
+      model: "gpt-4o-mini",
+      requestUrl: "https://api.openai.com/v1/responses",
+    }), false);
   });
 });
 

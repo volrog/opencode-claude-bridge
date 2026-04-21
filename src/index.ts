@@ -31,6 +31,7 @@ import {
   translateToolArgsJsonString,
   computeFingerprint,
   extractFirstUserMessageText,
+  shouldUseClaudeToolSchemas,
 } from "./claude-tools.js";
 import { createSseProcessor } from "./stream.js";
 
@@ -515,6 +516,16 @@ const OpenCodeClaudeBridge = async ({ client }: { client: PluginClient }) => {
             if (body && typeof body === "string") {
               try {
                 const parsed = JSON.parse(body);
+                let requestUrl = "";
+                try {
+                  requestUrl = String(
+                    new URL(
+                      typeof input === "string" ? input
+                      : input instanceof URL ? input.toString()
+                      : input.url,
+                    ),
+                  );
+                } catch {}
 
                 // Only inject adaptive thinking for models that support it.
                 // Use an explicit allowlist — haiku and older sonnet variants
@@ -604,10 +615,13 @@ const OpenCodeClaudeBridge = async ({ client }: { client: PluginClient }) => {
                   parsed.system = normalizeSystemBlocks(parsed.system);
                 }
 
-                // Replace OpenCode's tool definitions with Claude Code's exact
-                // wire-captured definitions (matching descriptions, schemas,
-                // parameter names, and ordering).
-                parsed.tools = getClaudeTools();
+                // Keep OpenCode's default tool schemas for non-Claude targets.
+                // Claude wire schemas are only useful for Anthropic-native
+                // requests or Claude-family models on Anthropic-compatible
+                // routers such as OpenRouter.
+                if (shouldUseClaudeToolSchemas({ model: parsed.model, requestUrl })) {
+                  parsed.tools = getClaudeTools();
+                }
                 delete parsed.tool_choice;
 
                 // Normalize message content blocks:

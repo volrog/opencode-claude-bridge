@@ -22,6 +22,11 @@ export type ToolDefinition = {
   input_schema: Record<string, unknown>;
 };
 
+export type ToolSchemaSelectionInput = {
+  model?: string;
+  requestUrl?: string;
+};
+
 // ── Fingerprint ────────────────────────────────────────────────────
 
 const FINGERPRINT_SALT = "59cf53e54c78";
@@ -905,6 +910,32 @@ export function getClaudeTools(): ToolDefinition[] {
   return [...SHARED_TOOLS, ...STUB_TOOLS].sort((a, b) =>
     a.name.localeCompare(b.name),
   );
+}
+
+/**
+ * Decide whether to replace OpenCode's tool definitions with Claude Code's
+ * wire-captured schemas for a given request target/model.
+ *
+ * Rules:
+ * - Native Anthropic requests always use Claude schemas.
+ * - OpenRouter requests only use Claude schemas for Claude-family models.
+ * - Everything else keeps OpenCode's original tool definitions.
+ */
+export function shouldUseClaudeToolSchemas(
+  input: ToolSchemaSelectionInput,
+): boolean {
+  const model = String(input.model || "").toLowerCase();
+  const url = String(input.requestUrl || "").toLowerCase();
+
+  if (url.includes("api.anthropic.com")) return true;
+
+  if (url.includes("openrouter.ai")) {
+    return model.startsWith("anthropic/") || model.includes("claude");
+  }
+
+  return model.startsWith("claude-")
+    || model.startsWith("anthropic/")
+    || model.includes("claude");
 }
 
 /** Names of tools that only exist in Claude Code (stubs). */

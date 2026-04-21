@@ -72,11 +72,17 @@ Claude Code sends 24 core tools (plus user-specific MCP tools). OpenCode has 10.
 
 The bridge resolves this by:
 
-1. **Replacing all 10 OpenCode tool definitions** with Claude Code's exact wire-captured definitions — matching descriptions, JSON schemas, parameter names, and required fields.
+1. **Replacing OpenCode's tool definitions only for Claude-compatible targets** with Claude Code's exact wire-captured definitions — matching descriptions, JSON schemas, parameter names, and required fields.
 2. **Adding 14 Claude-only stub tools**: `AskUserQuestion`, `CronCreate`, `CronDelete`, `CronList`, `EnterPlanMode`, `EnterWorktree`, `ExitPlanMode`, `ExitWorktree`, `Monitor`, `NotebookEdit`, `RemoteTrigger`, `TaskOutput`, `TaskStop`, `WebSearch`.
 3. **Sorting all 24 tools alphabetically** to match Claude Code's ordering.
 
 If the model calls a stub tool, OpenCode's built-in error handling catches it, tells the model the tool is unavailable, and the model adapts on the next turn.
+
+The bridge now selects tool schemas by target/model:
+
+- **Anthropic direct** -> Claude wire schemas
+- **OpenRouter Claude models** -> Claude wire schemas
+- **Everything else** -> OpenCode's default tool schemas
 
 ### Bidirectional parameter translation
 
